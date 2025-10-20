@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Capybara Abenteuer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a237e, #4fc3f7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            color: white;
+        }
+        
+        #game-container {
+            position: relative;
+            width: 1200px;
+            height: 700px;
+            background: linear-gradient(to bottom, #1e88e5 40%, #43a047 100%);
+            border: 4px solid #5d4037;
+            border-radius: 15px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+        
+        #game-canvas {
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* UI Elements */
+        #score {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 22px;
+            background: rgba(93, 64, 55, 0.9);
+            padding: 12px 25px;
+            border-radius: 30px;
+            z-index: 10;
+            font-weight: bold;
+            border: 2px solid #fff;
+        }
+        
+        #lives {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 22px;
+            color: #ff6d6d;
+            z-index: 10;
+            background: rgba(93, 64, 55, 0.9);
+            padding: 12px 25px;
+            border-radius: 30px;
+            border: 2px solid #fff;
+        }
+        
+        /* Buttons */
+        #pause-btn, #home-btn {
+            position: absolute;
+            top: 20px;
+            background: rgba(93, 64, 55, 0.9);
+            color: white;
+            border: 2px solid #fff;
+            padding: 10px 20px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            z-index: 10;
+            transition: all 0.3s;
+        }
+        
+        #pause-btn {
+            left: 200px;
+        }
+        
+        #home-btn {
+            left: 320px;
+        }
+        
+        #pause-btn:hover, #home-btn:hover {
+            background: rgba(121, 85, 72, 0.9);
+            transform: scale(1.05);
+        }
+        
+        /* Screens */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(33, 33, 33, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            z-index: 20;
+            color: white;
+        }
+        
+        #login-screen {
+            display: flex;
+        }
+        
+        #start-screen, #game-over, #home-menu, #shop-screen {
+            display: none;
+        }
+        
+        /* Form Styles */
+        .form-container {
+            background: rgba(69, 90, 100, 0.8);
+            padding: 40px;
+            border-radius: 20px;
+            border: 3px solid #ffb74d;
+            width: 400px;
+        }
+        
+        input {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            background: rgba(255, 255, 255, 0.9);
+        }
+        
+        button {
+            background: linear-gradient(45deg, #8d6e63, #5d4037);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            cursor: pointer;
+            margin: 10px 5px;
+            border-radius: 30px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            transition: all 0.3s;
+            font-weight: bold;
+            border: 2px solid #ffb74d;
+        }
+        
+        button:hover {
+            transform: scale(1.08);
+            box-shadow: 0 12px 25px rgba(0,0,0,0.6);
+            background: linear-gradient(45deg, #5d4037, #8d6e63);
+        }
+        
+        .guest-btn {
+            background: linear-gradient(45deg, #78909c, #546e7a);
+        }
+        
+        h1 {
+            color: #ffb74d;
+            margin-bottom: 20px;
+            font-size: 42px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+        }
+        
+        h2 {
+            color: #ffb74d;
+            margin: 20px 0;
+        }
+        
+        p {
+            margin: 12px 0;
+            font-size: 18px;
+        }
+        
+        /* Home Menu */
+        .home-options {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .home-options button {
+            width: 250px;
+        }
+        
+        /* Shop Styles */
+        .shop-categories {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .category-btn {
+            padding: 12px 24px;
+            font-size: 16px;
+        }
+        
+        .category-btn.active {
+            background: linear-gradient(45deg, #ffb74d, #ff9800);
+        }
+        
+        .shop-items {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+            max-width: 900px;
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        
+        .shop-item {
+            background: rgba(69, 90, 100, 0.8);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #ffb74d;
+            width: 200px;
+            text-align: center;
+            min-height: 280px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        
+        .shop-item img {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 10px;
+        }
+        
+        .shop-item .item-icon {
+            font-size: 60px;
+            margin-bottom: 10px;
+        }
+        
+        .shop-item button {
+            padding: 8px 16px;
+            font-size: 14px;
+            margin: 5px 2px;
+        }
+        
+        .owned {
+            border-color: #4caf50;
+        }
+        
+        .equipped {
+            border-color: #ffb74d;
+            background: rgba(255, 183, 77, 0.1);
+        }
+        
+        .cant-afford {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .cant-afford button:hover {
+            transform: none;
+        }
+        
+        .item-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .equip-btn {
+            background: linear-gradient(45deg, #4caf50, #66bb6a);
+        }
+        
+        .unequip-btn {
+            background: linear-gradient(45deg, #f44336, #e53935);
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas" width="1200" height="700"></canvas>
+        
+        <!-- UI Elements -->
+        <div id="score">🍓: 0</div>
+        <div id="lives">❤️ ❤️ ❤️</div>
+        <button id="pause-btn">⏸️ Pause</button>
+        <button id="home-btn">🏠 Home</button>
+        
+        <!-- Screens -->
+        <div id="login-screen" class="screen">
+            <div class="form-container">
+                <h1>Capybara Abenteuer</h1>
+                <p>Bitte anmelden oder als Gast spielen</p>
+                <input type="text" id="username" placeholder="Username">
+                <input type="password" id="password" placeholder="Passwort">
+                <button id="login-btn">Anmelden</button>
+                <button id="guest-btn" class="guest-btn">Als Gast spielen</button>
+                <p style="margin-top: 20px; font-size: 14px; color: #b0bec5;">
+                    Keine E-Mail benötigt! Dein Fortschritt wird lokal gespeichert.
+                </p>
+            </div>
+        </div>
+        
+        <div id="start-screen" class="screen">
+            <h1>Capybara Abenteuer</h1>
+            <p>Bereit für dein Abenteuer, <span id="player-name">Spieler</span>?</p>
+            <button id="start-button">Spiel starten</button>
+            <p class="instructions">LEERTASTE für Sprünge - Doppelt klicken für Doppelsprung!</p>
+        </div>
+        
+        <div id="game-over" class="screen">
+            <h1>Abenteuer beendet</h1>
+            <p id="final-score">Erdbeeren gesammelt: 0</p>
+            <button id="restart-button">Nochmal spielen</button>
+            <button id="menu-button">Zum Hauptmenü</button>
+        </div>
+        
+        <div id="home-menu" class="screen">
+            <h1>Hauptmenü</h1>
+            <div class="home-options">
+                <button id="resume-btn">Weiterspielen</button>
+                <button id="reset-btn">Reset</button>
+                <button id="save-btn">Fortschritt speichern</button>
+                <button id="shop-btn">Shop</button>
+            </div>
+        </div>
+        
+        <div id="shop-screen" class="screen">
+            <h1>Capybara Shop</h1>
+            <p>Deine Erdbeeren: <span id="shop-score">0</span> 🍓</p>
+            
+            <div class="shop-categories">
+                <button class="category-btn active" data-category="accessories">Accessoires</button>
+                <button class="category-btn" data-category="characters">Charaktere</button>
+            </div>
+            
+            <div id="accessories-category" class="shop-category">
+                <div class="shop-items">
+                    <!-- Accessoires Items -->
+                    <div class="shop-item" id="glasses-item">
+                        <div class="item-icon">🕶️</div>
+                        <h3>Coole Brille</h3>
+                        <p>100 🍓</p>
+                        <div class="item-actions">
+                            <button class="buy-btn" data-item="glasses">Kaufen</button>
+                        </div>
+                    </div>
+                    
+                    <div class="shop-item" id="hat-item">
+                        <div class="item-icon">🎅</div>
+                        <h3>Weihnachtsmütze</h3>
+                        <p>1000 🍓</p>
+                        <div class="item-actions">
+                            <button class="buy-btn" data-item="hat">Kaufen</button>
+                        </div>
+                    </div>
+                    
+                    <div class="shop-item" id="shoes-item">
+                        <div class="item-icon">👟</div>
+                        <h3>Laufschuhe</h3>
+                        <p>5000 🍓</p>
+                        <div class="item-actions">
+                            <button class="buy-btn" data-item="shoes">Kaufen</button>
+                        </div>
+                    </div>
+                    
+                    <div class="shop-item" id="sunglasses-item">
+                        <div class="item-icon">😎</div>
+                        <h3>Sonnenbrille</h3>
+                        <p>7000 🍓</p>
+                        <div class="item-actions">
+                            <button class="buy-btn" data-item="sunglasses">Kaufen</button>
+                        </div>
+                    </div>
+                    
+                    <div class="shop-item" id="cowboyhat-item">
+                        <div class="item-icon">🤠</div>
+                        <h3>Cowboy Hut</h3>
+                        <p>10000 🍓</p>
+                        <div class="item-actions">
+                            <button class="buy-btn" data-item="cowboyhat">Kaufen</button>
+                        </div>
+                    </div>
+                    
+                    <div class="shop-item" id="cowboy-item">
+                        <div class="item-icon">🐴</div>
+                        <h3>Cowboy Reiter</h3>
+                        <p>15000 🍓</p>
+                        <div class="item-actions">
+                            <button class="buy-btn" data-item="cowboy">Kaufen</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="characters-category" class="shop-category" style="display: none;">
+                <div class="shop-items">
+                    <!-- Charaktere Items -->
+                    <div class="shop-item" id="rabbit-item">
+                        <div class="item-icon">🐰</div>
+                        <h3>Hase</h3>
+                        <p>20000 🍓</p>
+                        <div class="item-actions">
+                            <button class="buy-btn" data-item="rabbit">Kaufen</button>
+                        </div>
+                    </div>
+                    
+                    <div class="shop-item" id="dog-item">
+                        <div class="item-icon">🐶</div>
+                        <h3>Hund</h3>
+                        <p>30000 🍓</p>
+                        <div class="item-actions">
+                            <button class="buy-btn" data-item="dog">Kaufen</button>
+                        </div>
+                    </div>
+                    
+                    <div class="shop-item" id="cat-item">
+                        <div class="item-icon">🐱</div>
+                        <h3>Katze</h3>
+                        <p>50000 🍓</p>
+                        <div class="item-actions">
+                            <button class="buy-btn" data-item="cat">Kaufen</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <button id="back-from-shop">Zurück</button>
+        </div>
+    </div>
+
+    <script>
+        // Game State
+        const gameState = {
+            username: '',
+            isGuest: false,
+            score: 0,
+            highScore: 0,
+            strawberries: 0,
+            lives: 3,
+            gameRunning: false,
+            paused: false,
+            equipped: {
+                character: 'capybara',
+                accessories: []
+            },
+            owned: {
+                characters: ['capybara'],
+                accessories: []
+            },
+            canDoubleJump: false,
+            hasDoubleJumped: false
+        };
+
+        // DOM Elements
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('score');
+        const livesDisplay = document.getElementById('lives');
+        const shopScoreDisplay = document.getElementById('shop-score');
+        const playerNameDisplay = document.getElementById('player-name');
+        const finalScoreDisplay = document.getElementById('final-score');
+
+        // Screens
+        const loginScreen = document.getElementById('login-screen');
+        const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over');
+        const homeMenu = document.getElementById('home-menu');
+        const shopScreen = document.getElementById('shop-screen');
+        const accessoriesCategory = document.getElementById('accessories-category');
+        const charactersCategory = document.getElementById('characters-category');
+
+        // Buttons
+        const loginBtn = document.getElementById('login-btn');
+        const guestBtn = document.getElementById('guest-btn');
+        const startBtn = document.getElementById('start-button');
+        const restartBtn = document.getElementById('restart-button');
+        const menuBtn = document.getElementById('menu-button');
+        const pauseBtn = document.getElementById('pause-btn');
+        const homeBtn = document.getElementById('home-btn');
+        const resumeBtn = document.getElementById('resume-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const saveBtn = document.getElementById('save-btn');
+        const shopBtn = document.getElementById('shop-btn');
+        const backFromShopBtn = document.getElementById('back-from-shop');
+        const categoryBtns = document.querySelectorAll('.category-btn');
+
+        // Game Objects
+        let player = {
+            x: 180,
+            y: 520,
+            width: 160,
+            height: 75,
+            jumping: false,
+            jumpPower: 0,
+            groundY: 520,
+            frameCount: 0,
+            legCycle: 0,
+            type: 'capybara'
+        };
+
+        let obstacles = [];
+        let strawberries = [];
+        let gameSpeed = 6;
+        let lastObstacleTime = 0;
+        let obstacleGap = 2200;
+        let lastJumpTime = 0;
+        const doubleJumpThreshold = 300; // ms
+
+        // Item Preise
+        const itemPrices = {
+            glasses: 100,
+            hat: 1000,
+            shoes: 5000,
+            sunglasses: 7000,
+            cowboyhat: 10000,
+            cowboy: 15000,
+            rabbit: 20000,
+            dog: 30000,
+            cat: 50000
+        };
+
+        // Initialize Game
+        function initGame() {
+            loadGameProgress();
+            setupEventListeners();
+            updateShopDisplay();
+        }
+
+        // Event Listeners
+        function setupEventListeners() {
+            // Login
+            loginBtn.addEventListener('click', handleLogin);
+            guestBtn.addEventListener('click', handleGuestLogin);
+            
+            // Game Controls
+            startBtn.addEventListener('click', startGame);
+            restartBtn.addEventListener('click', startGame);
+            menuBtn.addEventListener('click', showHomeMenu);
+            
+            // UI Buttons
+            pauseBtn.addEventListener('click', togglePause);
+            homeBtn.addEventListener('click', showHomeMenu);
+            resumeBtn.addEventListener('click', resumeGame);
+            resetBtn.addEventListener('click', resetGame);
+            saveBtn.addEventListener('click', saveGameProgress);
+            shopBtn.addEventListener('click', showShop);
+            backFromShopBtn.addEventListener('click', hideShop);
+            
+            // Shop Categories
+            categoryBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const category = e.target.dataset.category;
+                    switchCategory(category);
+                });
+            });
+            
+            // Shop Items (Event Delegation)
+            document.addEventListener('click', (e) => {
+                if (e.target.classList.contains('buy-btn')) {
+                    const item = e.target.dataset.item;
+                    buyItem(item);
+                }
+                if (e.target.classList.contains('equip-btn')) {
+                    const item = e.target.dataset.item;
+                    equipItem(item);
+                }
+                if (e.target.classList.contains('unequip-btn')) {
+                    const item = e.target.dataset.item;
+                    unequipItem(item);
+                }
+            });
+            
+            // Keyboard
+            document.addEventListener('keydown', handleKeyPress);
+            
+            // Touch
+            canvas.addEventListener('touchstart', handleTouch);
+        }
+
+        // Login Functions
+        function handleLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            if (username && password) {
+                gameState.username = username;
+                gameState.isGuest = false;
+                showStartScreen();
+            } else {
+                alert('Bitte Username und Passwort eingeben!');
+            }
+        }
+
+        function handleGuestLogin() {
+            gameState.username = 'Gast';
+            gameState.isGuest = true;
+            showStartScreen();
+        }
+
+        function showStartScreen() {
+            loginScreen.style.display = 'none';
+            startScreen.style.display = 'flex';
+            playerNameDisplay.textContent = gameState.username;
+        }
+
+        // Screen Management
+        function showHomeMenu() {
+            if (gameState.gameRunning) {
+                gameState.paused = true;
+            }
+            homeMenu.style.display = 'flex';
+        }
+
+        function hideHomeMenu() {
+            homeMenu.style.display = 'none';
+            if (gameState.gameRunning) {
+                gameState.paused = false;
+                gameLoop();
+            }
+        }
+
+        function showShop() {
+            homeMenu.style.display = 'none';
+            shopScreen.style.display = 'flex';
+            updateShopDisplay();
+        }
+
+        function hideShop() {
+            shopScreen.style.display = 'none';
+            homeMenu.style.display = 'flex';
+        }
+
+        function switchCategory(category) {
+            // Update active button
+            categoryBtns.forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.category === category) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            // Show correct category
+            if (category === 'accessories') {
+                accessoriesCategory.style.display = 'block';
+                charactersCategory.style.display = 'none';
+            } else {
+                accessoriesCategory.style.display = 'none';
+                charactersCategory.style.display = 'block';
+            }
+        }
+
+        function updateShopDisplay() {
+            shopScoreDisplay.textContent = gameState.strawberries;
+            
+            // Update all shop items
+            Object.keys(itemPrices).forEach(item => {
+                updateShopItem(item);
+            });
+        }
+
+        function updateShopItem(item) {
+            const itemElement = document.getElementById(`${item}-item`);
+            if (!itemElement) return;
+            
+            const isOwned = gameState.owned.accessories.includes(item) || 
+                           gameState.owned.characters.includes(item);
+            const isEquipped = gameState.equipped.accessories.includes(item) || 
+                              gameState.equipped.character === item;
+            
+            // Clear previous classes
+            itemElement.classList.remove('owned', 'equipped', 'cant-afford');
+            
+            if (isOwned) {
+                itemElement.classList.add('owned');
+                if (isEquipped) {
+                    itemElement.classList.add('equipped');
+                }
+            } else if (gameState.strawberries < itemPrices[item]) {
+                itemElement.classList.add('cant-afford');
+            }
+            
+            // Update buttons
+            const actionsDiv = itemElement.querySelector('.item-actions');
+            actionsDiv.innerHTML = '';
+            
+            if (!isOwned) {
+                const buyBtn = document.createElement('button');
+                buyBtn.className = 'buy-btn';
+                buyBtn.dataset.item = item;
+                buyBtn.textContent = `Kaufen (${itemPrices[item]} 🍓)`;
+                buyBtn.disabled = gameState.strawberries < itemPrices[item];
+                actionsDiv.appendChild(buyBtn);
+            } else {
+                if (isCharacter(item)) {
+                    if (!isEquipped) {
+                        const equipBtn = document.createElement('button');
+                        equipBtn.className = 'equip-btn';
+                        equipBtn.dataset.item = item;
+                        equipBtn.textContent = 'Ausrüsten';
+                        actionsDiv.appendChild(equipBtn);
+                    } else {
+                        const unequipBtn = document.createElement('button');
+                        unequipBtn.className = 'unequip-btn';
+                        unequipBtn.dataset.item = item;
+                        unequipBtn.textContent = 'Entfernen';
+                        actionsDiv.appendChild(unequipBtn);
+                    }
+                } else {
+                    if (!isEquipped) {
+                        const equipBtn = document.createElement('button');
+                        equipBtn.className = 'equip-btn';
+                        equipBtn.dataset.item = item;
+                        equipBtn.textContent = 'Ausrüsten';
+                        actionsDiv.appendChild(equipBtn);
+                    } else {
+                        const unequipBtn = document.createElement('button');
+                        unequipBtn.className = 'unequip-btn';
+                        unequipBtn.dataset.item = item;
+                        unequipBtn.textContent = 'Entfernen';
+                        actionsDiv.appendChild(unequipBtn);
+                    }
+                }
+            }
+        }
+
+        function isCharacter(item) {
+            return ['rabbit', 'dog', 'cat'].includes(item);
+        }
+
+        // Shop Functions
+        function buyItem(item) {
+            const price = itemPrices[item];
+            if (gameState.strawberries >= price) {
+                gameState.strawberries -= price;
+                
+                if (isCharacter(item)) {
+                    gameState.owned.characters.push(item);
+                } else {
+                    gameState.owned.accessories.push(item);
+                }
+                
+                updateShopDisplay();
+                saveGameProgress();
+            }
+        }
+
+        function equipItem(item) {
+            if (isCharacter(item)) {
+                gameState.equipped.character = item;
+                player.type = item;
+            } else {
+                if (!gameState.equipped.accessories.includes(item)) {
+                    gameState.equipped.accessories.push(item);
+                }
+            }
+            updateShopDisplay();
+            saveGameProgress();
+        }
+
+        function unequipItem(item) {
+            if (isCharacter(item)) {
+                gameState.equipped.character = 'capybara';
+                player.type = 'capybara';
+            } else {
+                const index = gameState.equipped.accessories.indexOf(item);
+                if (index > -1) {
+                    gameState.equipped.accessories.splice(index, 1);
+                }
+            }
+            updateShopDisplay();
+            saveGameProgress();
+        }
+
+        // Game Progress Management
+        function saveGameProgress() {
+            if (!gameState.isGuest) {
+                const progress = {
+                    username: gameState.username,
+                    highScore: gameState.highScore,
+                    strawberries: gameState.strawberries,
+                    owned: gameState.owned,
+                    equipped: gameState.equipped
+                };
+                localStorage.setItem(`capybara_${gameState.username}`, JSON.stringify(progress));
+                alert('Fortschritt gespeichert!');
+            } else {
+                alert('Gast-Spieler können keinen Fortschritt speichern!');
+            }
+        }
+
+        function loadGameProgress() {
+            if (!gameState.isGuest && gameState.username) {
+                const saved = localStorage.getItem(`capybara_${gameState.username}`);
+                if (saved) {
+                    const progress = JSON.parse(saved);
+                    gameState.highScore = progress.highScore || 0;
+                    gameState.strawberries = progress.strawberries || 0;
+                    gameState.owned = progress.owned || gameState.owned;
+                    gameState.equipped = progress.equipped || gameState.equipped;
+                    
+                    // Set player type
+                    player.type = gameState.equipped.character || 'capybara';
+                }
+            }
+        }
+
+        function resetGame() {
+            if (confirm('Wirklich alles zurücksetzen? Dein Fortschritt geht verloren!')) {
+                gameState.score = 0;
+                gameState.strawberries = 0;
+                gameState.highScore = 0;
+                gameState.owned = { 
+                    characters: ['capybara'],
+                    accessories: []
+                };
+                gameState.equipped = {
+                    character: 'capybara',
+                    accessories: []
+                };
+                player.type = 'capybara';
+                
+                if (!gameState.isGuest) {
+                    localStorage.removeItem(`capybara_${gameState.username}`);
+                }
+                
+                updateShopDisplay();
+                hideHomeMenu();
+            }
+        }
+
+        // Game Functions
+        function startGame() {
+            gameState.gameRunning = true;
+            gameState.paused = false;
+            gameState.score = 0;
+            gameState.lives = 3;
+            gameState.canDoubleJump = false;
+            gameState.hasDoubleJumped = false;
+            
+            obstacles = [];
+            strawberries = [];
+            player.y = player.groundY;
+            player.jumping = false;
+            player.frameCount = 0;
+            
+            startScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+            homeMenu.style.display = 'none';
+            
+            updateUI();
+            gameLoop();
+        }
+
+        function togglePause() {
+            if (gameState.gameRunning) {
+                gameState.paused = !gameState.paused;
+                pauseBtn.textContent = gameState.paused ? '▶️ Weiter' : '⏸️ Pause';
+                
+                if (!gameState.paused) {
+                    gameLoop();
+                }
+            }
+        }
+
+        function resumeGame() {
+            hideHomeMenu();
+        }
+
+        function gameOver() {
+            gameState.gameRunning = false;
+            gameState.strawberries += Math.floor(gameState.score / 10);
+            
+            if (gameState.score > gameState.highScore) {
+                gameState.highScore = gameState.score;
+            }
+            
+            finalScoreDisplay.textContent = `Erdbeeren gesammelt: ${gameState.score}`;
+            gameOverScreen.style.display = 'flex';
+            saveGameProgress();
+        }
+
+        // Drawing Functions
+        function drawPlayer() {
+            player.frameCount++;
+            player.legCycle = Math.sin(player.frameCount * 0.25) * 6;
+            
+            ctx.save();
+            ctx.translate(player.x + 80, player.y + 37);
+            
+            // Zeichne den Charakter basierend auf dem Typ
+            drawCharacter();
+            
+            // Zeichne Accessoires
+            drawAccessories();
+            
+            ctx.restore();
+        }
+
+        function drawCharacter() {
+            // Grundkörper für alle Charaktere
+            ctx.fillStyle = getCharacterColor();
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 80, 40, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Kopf - GRÖSSER für alle Charaktere
+            ctx.fillStyle = getCharacterColor();
+            ctx.beginPath();
+            ctx.roundRect(55, -35, 60, 45, 10);
+            ctx.fill();
+            
+            // Charakter-spezifische Merkmale
+            switch(player.type) {
+                case 'rabbit':
+                    drawRabbitFeatures();
+                    break;
+                case 'dog':
+                    drawDogFeatures();
+                    break;
+                case 'cat':
+                    drawCatFeatures();
+                    break;
+                default: // capybara
+                    drawCapybaraFeatures();
+                    break;
+            }
+            
+            // Beine für alle Charaktere
+            ctx.fillStyle = getLegColor();
+            if (!player.jumping) {
+                ctx.fillRect(-65, 35, 18, 30 + player.legCycle);
+                ctx.fillRect(-35, 35, 18, 30 - player.legCycle);
+                ctx.fillRect(15, 35, 18, 30 + player.legCycle);
+                ctx.fillRect(45, 35, 18, 30 - player.legCycle);
+            } else {
+                ctx.fillRect(-65, 35, 18, 25);
+                ctx.fillRect(-35, 35, 18, 25);
+                ctx.fillRect(15, 35, 18, 25);
+                ctx.fillRect(45, 35, 18, 25);
+            }
+        }
+
+        function getCharacterColor() {
+            switch(player.type) {
+                case 'rabbit': return '#FFFFFF';
+                case 'dog': return '#8D6E63';
+                case 'cat': return '#9E9E9E';
+                default: return '#8D6E63';
+            }
+        }
+
+        function getLegColor() {
+            switch(player.type) {
+                case 'rabbit': return '#E0E0E0';
+                case 'dog': return '#6D4C41';
+                case 'cat': return '#757575';
+                default: return '#6D4C41';
+            }
+        }
+
+        function drawCapybaraFeatures() {
+            // Capybara-spezifische Merkmale (wie vorher)
+            ctx.fillStyle = '#8D6E63';
+            ctx.beginPath();
+            ctx.roundRect(110, -30, 40, 30, 6);
+            ctx.fill();
+            
+            // Augen
+            ctx.fillStyle = '#4E342E';
+            ctx.beginPath();
+            ctx.arc(75, -20, 6, 0, Math.PI * 2);
+            ctx.arc(95, -20, 6, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Augenreflex
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.beginPath();
+            ctx.arc(76, -21, 2, 0, Math.PI * 2);
+            ctx.arc(96, -21, 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawRabbitFeatures() {
+            // Hasen-Ohren
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            ctx.ellipse(65, -50, 8, 20, 0, 0, Math.PI * 2);
+            ctx.ellipse(95, -50, 8, 20, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Hasen-Gesicht
+            ctx.fillStyle = '#4E342E';
+            ctx.beginPath();
+            ctx.arc(75, -15, 4, 0, Math.PI * 2);
+            ctx.arc(95, -15, 4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawDogFeatures() {
+            // Hund-Gesicht
+            ctx.fillStyle = '#4E342E';
+            ctx.beginPath();
+            ctx.arc(75, -20, 5, 0, Math.PI * 2);
+            ctx.arc(95, -20, 5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Hundeschnauze
+            ctx.fillStyle = '#6D4C41';
+            ctx.beginPath();
+            ctx.roundRect(105, -25, 35, 20, 5);
+            ctx.fill();
+        }
+
+        function drawCatFeatures() {
+            // Katzen-Gesicht
+            ctx.fillStyle = '#4E342E';
+            ctx.beginPath();
+            ctx.arc(75, -20, 4, 0, Math.PI * 2);
+            ctx.arc(95, -20, 4, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Katzenohren
+            ctx.fillStyle = '#9E9E9E';
+            ctx.beginPath();
+            ctx.moveTo(60, -40);
+            ctx.lineTo(70, -55);
+            ctx.lineTo(80, -40);
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.moveTo(90, -40);
+            ctx.lineTo(100, -55);
+            ctx.lineTo(110, -40);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function drawAccessories() {
+            // Brille
+            if (gameState.equipped.accessories.includes('glasses')) {
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(75, -20, 10, 0, Math.PI * 2);
+                ctx.arc(95, -20, 10, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            
+            // Weihnachtsmütze
+            if (gameState.equipped.accessories.includes('hat')) {
+                ctx.fillStyle = '#f44336';
+                ctx.beginPath();
+                ctx.moveTo(85, -55);
+                ctx.lineTo(65, -40);
+                ctx.lineTo(105, -40);
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.ellipse(85, -55, 5, 8, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Schuhe
+            if (gameState.equipped.accessories.includes('shoes')) {
+                ctx.fillStyle = '#ff9800';
+                ctx.fillRect(-65, 35, 18, 10);
+                ctx.fillRect(-35, 35, 18, 10);
+                ctx.fillRect(15, 35, 18, 10);
+                ctx.fillRect(45, 35, 18, 10);
+            }
+            
+            // Sonnenbrille
+            if (gameState.equipped.accessories.includes('sunglasses')) {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(65, -25, 20, 8);
+                ctx.fillRect(85, -25, 20, 8);
+            }
+            
+            // Cowboy Hut
+            if (gameState.equipped.accessories.includes('cowboyhat')) {
+                ctx.fillStyle = '#8B4513';
+                ctx.beginPath();
+                ctx.ellipse(85, -45, 25, 8, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(85, -50, 15, 5, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Cowboy Reiter
+            if (gameState.equipped.accessories.includes('cowboy')) {
+                // Kleiner Cowboy auf dem Rücken
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(-20, -20, 40, 30);
+                ctx.fillStyle = '#FFD700';
+                ctx.beginPath();
+                ctx.arc(0, -25, 8, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Rest der Zeichenfunktionen...
+        function drawObstacles() {
+            obstacles.forEach(obstacle => {
+                ctx.fillStyle = '#8d6e63';
+                ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+            });
+        }
+
+        function drawStrawberries() {
+            strawberries.forEach(berry => {
+                ctx.fillStyle = '#f44336';
+                ctx.beginPath();
+                ctx.ellipse(berry.x, berry.y, 14, 10, Math.PI/6, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function drawBackground() {
+            const skyGradient = ctx.createLinearGradient(0, 0, 0, 600);
+            skyGradient.addColorStop(0, '#1565c0');
+            skyGradient.addColorStop(1, '#42a5f5');
+            ctx.fillStyle = skyGradient;
+            ctx.fillRect(0, 0, canvas.width, 600);
+            
+            ctx.fillStyle = '#689f38';
+            ctx.fillRect(0, 600, canvas.width, 100);
+        }
+
+        // Game Loop und Physik
+        function updateGame() {
+            if (gameState.paused) return;
+            
+            // Sprungphysik mit Doppelsprung
+            if (player.jumping) {
+                player.y -= player.jumpPower;
+                player.jumpPower -= 0.45;
+                
+                if (player.y >= player.groundY) {
+                    player.y = player.groundY;
+                    player.jumping = false;
+                    player.jumpPower = 0;
+                    gameState.canDoubleJump = false;
+                    gameState.hasDoubleJumped = false;
+                }
+            }
+            
+            // Hindernisse und Erdbeeren bewegen
+            obstacles.forEach((obstacle, index) => {
+                obstacle.x -= gameSpeed;
+                if (obstacle.x + obstacle.width < 0) obstacles.splice(index, 1);
+            });
+            
+            strawberries.forEach((berry, index) => {
+                berry.x -= gameSpeed;
+                if (berry.x + 14 < 0) strawberries.splice(index, 1);
+            });
+            
+            // Neue Objekte spawnen
+            const currentTime = Date.now();
+            if (currentTime - lastObstacleTime > obstacleGap) {
+                obstacles.push({
+                    x: canvas.width,
+                    y: 545,
+                    width: 120,
+                    height: 25
+                });
+                lastObstacleTime = currentTime;
+                obstacleGap = 2500 + Math.random() * 1500;
+            }
+            
+            if (Math.random() < 0.025) {
+                strawberries.push({
+                    x: canvas.width,
+                    y: 500 + Math.random() * 80
+                });
+            }
+            
+            // Kollisionserkennung
+            obstacles.forEach((obstacle, index) => {
+                if (player.x < obstacle.x + obstacle.width &&
+                    player.x + player.width > obstacle.x &&
+                    player.y < obstacle.y + obstacle.height &&
+                    player.y + player.height > obstacle.y) {
+                    gameState.lives--;
+                    obstacles.splice(index, 1);
+                    if (gameState.lives <= 0) gameOver();
+                }
+            });
+            
+            strawberries.forEach((berry, index) => {
+                if (player.x < berry.x + 14 &&
+                    player.x + player.width > berry.x - 14 &&
+                    player.y < berry.y + 10 &&
+                    player.y + player.height > berry.y - 10) {
+                    gameState.score += 10;
+                    strawberries.splice(index, 1);
+                }
+            });
+            
+            gameState.score++;
+            updateUI();
+        }
+
+        function updateUI() {
+            scoreDisplay.textContent = `🍓: ${gameState.score}`;
+            livesDisplay.textContent = '❤️ '.repeat(gameState.lives);
+        }
+
+        function gameLoop() {
+            if (!gameState.gameRunning || gameState.paused) return;
+            
+            updateGame();
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawBackground();
+            drawStrawberries();
+            drawObstacles();
+            drawPlayer();
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Input Handling mit Doppelsprung
+        function handleKeyPress(e) {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                handleJump();
+            }
+        }
+
+        function handleTouch(e) {
+            e.preventDefault();
+            handleJump();
+        }
+
+        function handleJump() {
+            const currentTime = Date.now();
+            
+            if (!gameState.gameRunning && startScreen.style.display !== 'none') {
+                startGame();
+                return;
+            }
+            
+            if (!gameState.gameRunning || gameState.paused) return;
+            
+            // Doppelsprung Logik
+            if (!player.jumping) {
+                // Normaler Sprung
+                player.jumping = true;
+                player.jumpPower = 18;
+                gameState.canDoubleJump = true;
+                lastJumpTime = currentTime;
+            } else if (gameState.canDoubleJump && !gameState.hasDoubleJumped && 
+                      currentTime - lastJumpTime < doubleJumpThreshold) {
+                // Doppelsprung
+                player.jumpPower = 15;
+                gameState.hasDoubleJumped = true;
+                gameState.canDoubleJump = false;
+            }
+        }
+
+        // Start the game
+        initGame();
+    </script>
+</body>
+</html>
